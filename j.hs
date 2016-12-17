@@ -43,8 +43,8 @@ instance Show JSON where
 
 
 -- find amount of nodes with maximal power
-lab2 :: JSON -> Integer
-lab2 tree = snd (lab2' tree) where
+lab2 :: JSON -> (Integer, Integer)
+lab2 tree = (lab2' tree) where
     theFold :: (Integer, Integer) -> (Integer, Integer) -> (Integer, Integer)
     theFold (accPwr, accN) (itemPwr, itemN)
         | accPwr > itemPwr = (accPwr, accN)
@@ -56,8 +56,6 @@ lab2 tree = snd (lab2' tree) where
     lab2' (JBool _) = (0, 1)
     lab2' (JNum _) = (0, 1)
     lab2' (JString _) = (0, 1)
-    lab2' (JArray []) = (0, 1)
-    lab2' (JObject []) = (0, 1)
     lab2' (JArray nodes)  = foldl theFold (toInteger $ length nodes, 1) $ map lab2' nodes
     lab2' (JObject nodes) = foldl theFold (toInteger $ length nodes, 1) $ map (lab2' . snd) nodes
 
