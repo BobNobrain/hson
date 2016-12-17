@@ -1,3 +1,5 @@
+import System.Random
+
 data JSON =
     JObject [(String, JSON)] |
     JArray [JSON] |
@@ -68,9 +70,58 @@ stringify (JObject dict) = bracketize $ join $ map stringify' dict where
 instance Show JSON where
     show = stringify
 
--- TODO: remove whitespaces between tokens before parsing
-type ImResult = Maybe (String, JSON)
+
+randomTree :: StdGen -> Integer -> (JSON, StdGen)
+randomTree g depthLeft = case rnd of 0 -> rString g'
+                                     1 -> rNum g'
+                                     2 -> rBool g'
+                                     4 -> rObj g'
+                                     5 -> rArr g'
+                                     _ -> (JNull, g')
+    where
+        (rnd, g') = randomR (0, (if depthLeft == 0 then 3 else 5)) g :: (Integer, StdGen)
+
+        rChar :: StdGen -> (Char, StdGen)
+        rChar g = randomR ('a', 'z') g
+
+        rString :: StdGen -> (JSON, StdGen)
+        rString g = (JString chars, gen) where
+            (n, g') = randomR (0, 16) g
+            theFold :: ([Char], StdGen) -> Integer -> ([Char], StdGen)
+            theFold (chs, gen) _ = (c:chs, gen') where
+                (c, gen') = rChar gen
+            (chars, gen) = foldl theFold ([], g') [1..n]
+
+        rNum :: StdGen -> (JSON, StdGen)
+        rNum g = (JNum n, g') where (n, g') = random g
+
+        rBool :: StdGen -> (JSON, StdGen)
+        rBool g = (JBool b, g') where (b, g') = random g
+
+        rArr :: StdGen -> (JSON, StdGen)
+        rArr g = (JArray subtrees, gen) where
+            (n, g') = randomR (0, 16) g
+            theFold :: ([JSON], StdGen) -> Integer -> ([JSON], StdGen)
+            theFold (subs, gen) _ = (newTree:subs, gen') where
+                (newTree, gen') = randomTree gen (depthLeft - 1)
+            (subtrees, gen) = foldl theFold ([], g') [1..n]
+
+        rProp :: StdGen -> (String, JSON, StdGen)
+        rProp g = (key, value, g') where
+            (JString key, g'') = rString g
+            (value, g') = randomTree g'' (depthLeft - 1)
+
+        rObj :: StdGen -> (JSON, StdGen)
+        rObj g = (JObject properties, gen) where
+            (n, g') = randomR (0, 16) g
+            theFold :: ([(String, JSON)], StdGen) -> Integer -> ([(String, JSON)], StdGen)
+            theFold (props, gen) _ = ((newPropName, newPropVal):props, gen') where
+                (newPropName, newPropVal, gen') = rProp gen
+            (properties, gen) = foldl theFold ([], g') [1..n]
+
+
 type ImString = Maybe (String, String)
+type ImResult = Maybe (String, JSON)
 parse :: String -> (Maybe JSON)
 parse "" = Nothing
 parse s = case (parseValue $ removeWS s) of Nothing -> Nothing
