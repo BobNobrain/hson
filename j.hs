@@ -9,35 +9,6 @@ data JSON =
     JNull
     deriving (Eq)
 
-example1 = JArray
-    [
-        JObject
-            [
-                ("name", JString "Bob"),
-                ("surname", JNull),
-                ("password", JNull)
-            ],
-        JObject
-            [
-                ("name", JString "Alice"),
-                ("surname", JString "Cooper"),
-                ("password", JString "123")
-            ],
-        JObject
-            [
-                ("name", JString "Eve"),
-                ("surname", JString "Offline"),
-                ("password", JNull),
-                ("priveleges", JArray [
-                    JString "root"
-                ])
-            ]
-    ]
-
-example2 = "{\"aliases\":[{\"name\":\"stat\",\"value\":\"status --branch --short\"}],\"statistics\":[20,-1,10.0,15.2,-1.0]}";
-
-example3 = "{ \"aliases\": [{ \"name\": \"stat\", \"value\": \"status --branch --short\" }] }";
-
 join :: [String] -> String
 join [] = ""
 join (x:[]) = x
@@ -69,6 +40,26 @@ stringify (JObject dict) = bracketize $ join $ map stringify' dict where
 
 instance Show JSON where
     show = stringify
+
+
+-- find amount of nodes with maximal power
+lab2 :: JSON -> Integer
+lab2 tree = snd (lab2' tree) where
+    theFold :: (Integer, Integer) -> (Integer, Integer) -> (Integer, Integer)
+    theFold (accPwr, accN) (itemPwr, itemN)
+        | accPwr > itemPwr = (accPwr, accN)
+        | accPwr == itemPwr = (accPwr, accN + itemN)
+        | accPwr < itemPwr = (itemPwr, itemN)
+
+    lab2' :: JSON -> (Integer, Integer)
+    lab2' JNull = (0, 1)
+    lab2' (JBool _) = (0, 1)
+    lab2' (JNum _) = (0, 1)
+    lab2' (JString _) = (0, 1)
+    lab2' (JArray []) = (0, 1)
+    lab2' (JObject []) = (0, 1)
+    lab2' (JArray nodes)  = foldl theFold (toInteger $ length nodes, 1) $ map lab2' nodes
+    lab2' (JObject nodes) = foldl theFold (toInteger $ length nodes, 1) $ map (lab2' . snd) nodes
 
 
 randomTree :: StdGen -> Integer -> (JSON, StdGen)
@@ -245,3 +236,32 @@ parse s = case (parseValue $ removeWS s) of Nothing -> Nothing
                 | otherwise = remWS (clean ++ [f]) inString escaped fs
 
 -- endof parse where clause
+
+example1 = JArray
+    [
+        JObject
+            [
+                ("name", JString "Bob"),
+                ("surname", JNull),
+                ("password", JNull)
+            ],
+        JObject
+            [
+                ("name", JString "Alice"),
+                ("surname", JString "Cooper"),
+                ("password", JString "123")
+            ],
+        JObject
+            [
+                ("name", JString "Eve"),
+                ("surname", JString "Offline"),
+                ("password", JNull),
+                ("priveleges", JArray [
+                    JString "root"
+                ])
+            ]
+    ]
+
+example2 = "{\"aliases\":[{\"name\":\"stat\",\"value\":\"status --branch --short\"}],\"statistics\":[20,-1,10.0,15.2,-1.0]}";
+
+example3 = "{ \"aliases\": [{ \"name\": \"stat\", \"value\": \"status --branch --short\" }] }";
